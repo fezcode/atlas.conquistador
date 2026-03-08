@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"io"
 	"os"
 	"os/exec"
@@ -55,7 +56,26 @@ func ListDir(path string) ([]FileInfo, error) {
 	return files, nil
 }
 
-func Copy(src, dst string) error {
+func CopyWithProgress(ctx context.Context, src, dst string, onProgress func(string)) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	info, err := os.Lstat(src)
+	if err != nil {
+		return err
+	}
+
+	if info.IsDir() {
+		return copyDirWithProgress(ctx, src, dst, onProgress)
+	}
+	onProgress(src)
+	return copyFile(src, dst)
+}
+
+func copyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return err
@@ -81,10 +101,93 @@ func Copy(src, dst string) error {
 	return os.Chmod(dst, sourceInfo.Mode())
 }
 
-func Move(src, dst string) error {
+func copyDirWithProgress(ctx context.Context, src, dst string, onProgress func(string)) error {
+	info, err := os.Lstat(src)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(dst, info.Mode()); err != nil {
+		return err
+	}
+	onProgress(src)
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if err := CopyWithProgress(ctx, srcPath, dstPath, onProgress); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func MoveWithProgress(ctx context.Context, src, dst string, onProgress func(string)) error {
+	onProgress(src)
 	return os.Rename(src, dst)
 }
 
-func Delete(path string) error {
-	return os.RemoveAll(path)
+func DeleteWithProgress(ctx context.Context, path string, onProgress func(string)) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+
+	if info.IsDir() {
+		entries, err := os.ReadDir(path)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if err := DeleteWithProgress(ctx, filepath.Join(path, entry.Name()), onProgress); err != nil {
+				return err
+			}
+		}
+	}
+	
+	onProgress(path)
+	return os.Remove(path)
+}
+
+func CreateFile(path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
+
+func CreateDir(path string) error {
+	return os.MkdirAll(path, 0755)
+}
+
+func CountItems(ctx context.Context, paths []string) int {
+	count := 0
+	for _, p := range paths {
+		filepath.Walk(p, func(_ string, info os.FileInfo, err error) error {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+			if err == nil {
+				count++
+			}
+			return nil
+		})
+	}
+	return count
 }

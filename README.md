@@ -2,18 +2,26 @@
 
 ![Banner](banner-image.png)
 
-A beautiful and functional terminal-based file explorer like Finder or Windows Explorer.
+`atlas.conquistador` is a powerful, beautiful, and functional terminal-based file explorer for the Atlas Suite. It provides a modern experience similar to Finder or Windows Explorer, right in your terminal.
 
 ## Features
 
-- **Beautiful UI**: Built with Bubble Tea and Lip Gloss for a modern terminal experience.
-- **Navigation**: Intuitive `j/k` or arrow key navigation.
-- **Multi-selection**: Select multiple files/directories using `space`.
-- **Operations**: 
-  - **Copy/Cut/Paste**: Standard `c`, `x`, `p` shortcuts.
-  - **Delete**: Quick `d` shortcut for removal.
-- **Sorting**: Toggle between Name, Size, and Time using `s`.
-- **Open**: Enter directories or open files (using system defaults).
+- **Modern Boxed UI**: Centered titles, visible borders, and a clean aesthetic built with Bubble Tea.
+- **Advanced Navigation**: 
+  - `j/k` or Arrows for movement.
+  - `PgUp/PgDown` for fast scrolling.
+  - `Home/End` to jump to start or end.
+  - "Go Up" highlighting: Automatically selects the directory you just came from.
+- **Internal Previewers**:
+  - **Text Viewer**: View common files (`.txt`, `.md`, `.go`, etc.) with line numbers and EOF markers.
+  - **Hex Viewer**: Inspect binary files (like `.zip`, `.exe`) with a dedicated hex/ASCII display.
+- **File Operations**:
+  - **Multi-selection**: Select multiple items using `Space`.
+  - **Copy/Cut/Paste**: Standard clipboard operations with status indicators.
+  - **Delete**: Remove files/folders with safety confirmation.
+  - **Create**: Create new files or folders with a quick dialog (`n`).
+- **Dynamic Routing**: Navigate to any path (Relative or Absolute) using the `/` shortcut.
+- **Cross-Platform**: Open files in your system's default application with `Enter`.
 
 ## Installation
 
@@ -27,16 +35,21 @@ gobake build
 
 | Key | Action |
 |-----|--------|
-| `j`/`k` | Move cursor up/down |
-| `enter` | Enter directory / Open file |
-| `backspace` | Go to parent directory |
-| `space` | Toggle selection |
-| `c` | Copy selected items to clipboard |
-| `x` | Cut selected items to clipboard |
-| `p` | Paste items from clipboard |
-| `d` | Delete selected items |
+| `j`/`k`, `Arrows` | Navigate through files |
+| `PgUp`/`PgDown` | Fast navigation / Page scroll |
+| `Home`/`End` | Jump to start / end |
+| `h`, `Left`, `Backspace` | Go to parent directory |
+| `l`, `Right`, `Enter` | Open directory / Open externally |
+| `v` | View file internally (plain text) |
+| `m` | Hex view file |
+| `n` | New file or folder |
+| `Space` | Toggle selection |
+| `/` | Go to specific path (Rel/Abs) |
+| `c` / `x` / `p` | Copy / Cut / Paste |
+| `d` | Delete items (with confirmation) |
 | `s` | Cycle sort order (Name -> Size -> Time) |
-| `q` | Quit |
+| `?` | Show Help |
+| `q`, `Esc` | Quit / Close Help or Viewers |
 
 ## License
 
