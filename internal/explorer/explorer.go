@@ -755,17 +755,22 @@ func (m *Model) startDeleteOperation() tea.Cmd {
 			m.opStatus.Unlock()
 		}
 
+		var lastErr error
 		for _, p := range items {
 			select {
 			case <-ctx.Done():
 				return
 			default:
 			}
-			filesystem.DeleteWithProgress(ctx, p, onProgress)
+			if err := filesystem.DeleteWithProgress(ctx, p, onProgress); err != nil {
+				lastErr = err
+				break
+			}
 		}
 
 		m.opStatus.Lock()
 		m.opStatus.complete = true
+		m.opStatus.err = lastErr
 		m.opStatus.Unlock()
 	}()
 

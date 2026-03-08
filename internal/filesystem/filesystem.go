@@ -134,6 +134,10 @@ func MoveWithProgress(ctx context.Context, src, dst string, onProgress func(stri
 	return os.Rename(src, dst)
 }
 
+func Rename(src, dst string) error {
+	return os.Rename(src, dst)
+}
+
 func DeleteWithProgress(ctx context.Context, path string, onProgress func(string)) error {
 	select {
 	case <-ctx.Done():
