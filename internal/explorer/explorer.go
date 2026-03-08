@@ -68,6 +68,7 @@ type Model struct {
 	isViewer   bool
 	isHex      bool
 	isCreate   bool
+	isRename   bool
 	createFile bool // true for file, false for folder
 	toDelete   []string
 
@@ -256,7 +257,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case opFinishedMsg:
-		// Fallback for non-granular ops if any
 		m.isBusy = false
 		m.message = fmt.Sprintf("Operation complete: processed %d items", msg.total)
 		m.loadFiles("")
@@ -435,6 +435,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		if m.isRename {
+			switch msg.String() {
+			case "enter":
+				newName := m.input.Value()
+				if newName != "" {
+					oldPath := m.files[m.cursor].Path
+					newPath := filepath.Join(m.path, newName)
+					
+					if _, err := os.Stat(newPath); err == nil {
+						m.message = "Error: File already exists"
+					} else {
+						err := filesystem.Rename(oldPath, newPath)
+						if err != nil {
+							m.message = "Error: " + err.Error()
+						} else {
+							m.message = "Renamed to " + newName
+							m.loadFiles(newName)
+						}
+					}
+				}
+				m.isRename = false
+				m.input.SetValue("")
+				return m, tick()
+			case "esc":
+				m.isRename = false
+				m.input.SetValue("")
+			default:
+				m.input, cmd = m.input.Update(msg)
+				return m, cmd
+			}
+			return m, nil
+		}
+
 		if m.isConfirm {
 			switch msg.String() {
 			case "y", "Y":
@@ -536,6 +569,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.input.SetValue("")
 			m.input.Placeholder = "Enter name..."
 			m.input.Focus()
+			return m, nil
+
+		case "r": // Rename
+			if len(m.files) > 0 && m.files[m.cursor].Name != ".." {
+				m.isRename = true
+				m.input.SetValue(m.files[m.cursor].Name)
+				m.input.Placeholder = "Enter new name..."
+				m.input.Focus()
+			}
 			return m, nil
 
 		case "/": // Go to path
@@ -662,7 +704,6 @@ func (m *Model) startOperation(overwrite bool) tea.Cmd {
 	destDir := m.path
 	isCut := m.isCut
 	
-	// Prepare opStatus
 	m.opStatus.Lock()
 	m.opStatus.done = 0
 	m.opStatus.total = 0
@@ -671,9 +712,6 @@ func (m *Model) startOperation(overwrite bool) tea.Cmd {
 	m.opStatus.complete = false
 	m.opStatus.err = nil
 	m.opStatus.Unlock()
-
-	pProgram := tea.NewProgram(m) // (Keep for context if needed, though unused)
-	_ = pProgram
 
 	go func() {
 		total := filesystem.CountItems(ctx, queue)
@@ -931,6 +969,8 @@ func (m Model) View() string {
 		typeStr := "Folder"
 		if m.createFile { typeStr = "File" }
 		middleHeader = ui.SelectedStyle.Render(fmt.Sprintf("New %s: ", typeStr)) + m.input.View() + ui.InfoStyle.Render(" (Tab to toggle)")
+	} else if m.isRename {
+		middleHeader = ui.SelectedStyle.Render("Rename: ") + m.input.View()
 	}
 
 	var footerText string
@@ -1123,6 +1163,7 @@ func (m Model) HelpView() string {
 		{"v", "View file internally (text)"},
 		{"m", "Hex view file"},
 		{"n", "New file or folder"},
+		{"r", "Rename current item"},
 		{"Space", "Toggle selection"},
 		{"/", "Go to specific path (Rel/Abs)"},
 		{"c", "Copy selected/current item"},
