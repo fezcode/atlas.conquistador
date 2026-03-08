@@ -7,13 +7,35 @@ var (
 	HeaderStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true).Padding(0, 1)
 	DirStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
 	FileStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-	PathStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Italic(true)
-	InfoStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	PathStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("39")).Bold(true)
+	InfoStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	WarningStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
-	SuccessStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
+	SuccessStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true)
 	
 	CursorStyle = lipgloss.NewStyle().Background(lipgloss.Color("57")).Foreground(lipgloss.Color("255")).Bold(true)
 	InactiveStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+
+	// Box Styles
+	MainBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("238")).
+			Padding(0, 1)
+
+	HeaderBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder(), false, false, true, false).
+			BorderForeground(lipgloss.Color("238"))
+
+	FooterBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder(), true, false, false, false).
+			BorderForeground(lipgloss.Color("238"))
+
+	LineNumberStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	DividerStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+	EOFStyle        = lipgloss.NewStyle().
+			Background(lipgloss.Color("160")).
+			Foreground(lipgloss.Color("255")).
+			Bold(true).
+			Padding(0, 1)
 )
 
 func GetIcon(isDir bool, name string) string {

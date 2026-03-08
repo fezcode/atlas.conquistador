@@ -1,4 +1,4 @@
-module atlas.explorer
+module atlas.conquistador
 
 go 1.25.3
 

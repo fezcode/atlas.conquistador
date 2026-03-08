@@ -1,4 +1,4 @@
-# atlas.explorer
+# atlas.conquistador
 
 ![Banner](banner-image.png)
 
@@ -20,7 +20,7 @@ A beautiful and functional terminal-based file explorer like Finder or Windows E
 ```bash
 # Using gobake
 gobake build
-./build/atlas.explorer
+./build/atlas.conquistador
 ```
 
 ## Usage
