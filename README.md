@@ -20,6 +20,8 @@
   - **Copy/Cut/Paste**: Standard clipboard operations with status indicators.
   - **Delete**: Remove files/folders with safety confirmation.
   - **Create**: Create new files or folders with a quick dialog (`n`).
+  - **Conflict Resolution**: Interactive prompts for overwriting or skipping existing files.
+  - **Operation Modals**: Granular progress bars and real-time status updates for all long-running tasks.
 - **Dynamic Routing**: Navigate to any path (Relative or Absolute) using the `/` shortcut.
 - **Cross-Platform**: Open files in your system's default application with `Enter`.
 
