@@ -45,6 +45,7 @@ type OperationStatus struct {
 	counting bool
 	complete bool
 	err      error
+	duration time.Duration
 }
 
 type Model struct {
@@ -257,6 +258,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case opFinishedMsg:
+		// Fallback for non-granular ops if any
 		m.isBusy = false
 		m.message = fmt.Sprintf("Operation complete: processed %d items", msg.total)
 		m.loadFiles("")
@@ -713,6 +715,8 @@ func (m *Model) startOperation(overwrite bool) tea.Cmd {
 	m.opStatus.err = nil
 	m.opStatus.Unlock()
 
+	startTime := time.Now()
+
 	go func() {
 		total := filesystem.CountItems(ctx, queue)
 		m.opStatus.Lock()
@@ -752,6 +756,7 @@ func (m *Model) startOperation(overwrite bool) tea.Cmd {
 		
 		m.opStatus.Lock()
 		m.opStatus.complete = true
+		m.opStatus.duration = time.Since(startTime)
 		m.opStatus.Unlock()
 	}()
 
@@ -776,6 +781,8 @@ func (m *Model) startDeleteOperation() tea.Cmd {
 	m.opStatus.complete = false
 	m.opStatus.err = nil
 	m.opStatus.Unlock()
+
+	startTime := time.Now()
 
 	go func() {
 		total := filesystem.CountItems(ctx, items)
@@ -809,6 +816,7 @@ func (m *Model) startDeleteOperation() tea.Cmd {
 		m.opStatus.Lock()
 		m.opStatus.complete = true
 		m.opStatus.err = lastErr
+		m.opStatus.duration = time.Since(startTime)
 		m.opStatus.Unlock()
 	}()
 
@@ -1054,11 +1062,12 @@ func (m Model) BusyView() string {
 	var s strings.Builder
 	m.opStatus.Lock()
 	complete := m.opStatus.complete
+	duration := m.opStatus.duration
 	m.opStatus.Unlock()
 
 	if complete {
 		s.WriteString(ui.SuccessStyle.Render("Operation Complete!") + "\n\n")
-		s.WriteString(ui.InfoStyle.Render("  All items processed successfully.") + "\n\n")
+		s.WriteString(ui.InfoStyle.Render(fmt.Sprintf("  All items processed in %v.", duration.Round(time.Millisecond))) + "\n\n")
 		s.WriteString(ui.SelectedStyle.Render("  Press Enter to continue..."))
 		return s.String()
 	}
@@ -1175,6 +1184,7 @@ func (m Model) HelpView() string {
 		{"q, Esc", "Quit / Close Help"},
 	}
 
+	// Calculate column widths
 	col1Width := 20
 	col2Width := m.width - 10 - col1Width
 
