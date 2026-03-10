@@ -143,7 +143,6 @@ func (m *Model) loadFiles(targetName string) {
 	}
 	
 	m.files = files
-	m.sortFiles()
 
 	if hasParent {
 		m.files = append([]filesystem.FileInfo{{
@@ -152,6 +151,8 @@ func (m *Model) loadFiles(targetName string) {
 			IsDir: true,
 		}}, m.files...)
 	}
+
+	m.sortFiles()
 
 	if targetName != "" {
 		for i, f := range m.files {
@@ -181,6 +182,14 @@ func (m *Model) updateViewport() {
 
 func (m *Model) sortFiles() {
 	sort.Slice(m.files, func(i, j int) bool {
+		// Parent directory always at the top
+		if m.files[i].Name == ".." {
+			return true
+		}
+		if m.files[j].Name == ".." {
+			return false
+		}
+
 		if m.files[i].IsDir && !m.files[j].IsDir {
 			return true
 		}
