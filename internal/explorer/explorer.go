@@ -13,6 +13,7 @@ import (
 
 	"atlas.conquistador/internal/filesystem"
 	"atlas.conquistador/internal/ui"
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -70,6 +71,8 @@ type Model struct {
 	isHex      bool
 	isCreate   bool
 	isRename   bool
+	isSearch   bool
+	filter     string
 	createFile bool // true for file, false for folder
 	toDelete   []string
 
@@ -150,6 +153,17 @@ func (m *Model) loadFiles(targetName string) {
 			Path:  parent,
 			IsDir: true,
 		}}, m.files...)
+	}
+
+	if m.filter != "" {
+		var filtered []filesystem.FileInfo
+		query := strings.ToLower(m.filter)
+		for _, f := range m.files {
+			if f.Name == ".." || strings.Contains(strings.ToLower(f.Name), query) {
+				filtered = append(filtered, f)
+			}
+		}
+		m.files = filtered
 	}
 
 	m.sortFiles()
@@ -374,6 +388,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		if m.isSearch {
+			switch msg.String() {
+			case "enter":
+				m.isSearch = false
+			case "esc":
+				m.isSearch = false
+				m.filter = ""
+				m.input.SetValue("")
+				m.loadFiles("")
+			default:
+				var cmd tea.Cmd
+				m.input, cmd = m.input.Update(msg)
+				m.filter = m.input.Value()
+				m.loadFiles("")
+				return m, cmd
+			}
+			return m, nil
+		}
+
 		if m.isInput {
 			switch msg.String() {
 			case "enter":
@@ -495,6 +528,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 
+		case "esc":
+			if m.filter != "" {
+				m.filter = ""
+				m.loadFiles("")
+				return m, nil
+			}
+
 		case "?":
 			m.isHelp = true
 			return m, nil
@@ -518,6 +558,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "pgup":
 			m.cursor = max(0, m.cursor-10)
 			m.updateViewport()
+
+		case "w":
+			homeDir, err := os.UserHomeDir()
+			if err == nil {
+				m.path = homeDir
+				m.cursor = 0
+				m.top = 0
+				m.loadFiles("")
+			}
 
 		case "h", "left", "backspace":
 			parent := filepath.Dir(m.path)
@@ -591,6 +640,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 
+		case "f": // Find/Filter
+			m.isSearch = true
+			m.input.SetValue(m.filter)
+			m.input.Placeholder = "Find in directory..."
+			m.input.Focus()
+			return m, nil
+
 		case "/": // Go to path
 			m.isInput = true
 			m.input.SetValue(m.path)
@@ -610,6 +666,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selected[f.Path] = true
 				}
 			}
+
+		case "y": // Yank path
+			var pathsToCopy []string
+			if len(m.selected) > 0 {
+				for p := range m.selected {
+					pathsToCopy = append(pathsToCopy, p)
+				}
+			} else if len(m.files) > 0 {
+				if m.files[m.cursor].Name != ".." {
+					pathsToCopy = append(pathsToCopy, m.files[m.cursor].Path)
+				} else {
+					pathsToCopy = append(pathsToCopy, m.path)
+				}
+			}
+			
+			if len(pathsToCopy) > 0 {
+				text := strings.Join(pathsToCopy, "\n")
+				err := clipboard.WriteAll(text)
+				if err != nil {
+					m.message = "Error copying to OS clipboard: " + err.Error()
+				} else {
+					if len(pathsToCopy) == 1 {
+						m.message = "Copied path to OS clipboard"
+					} else {
+						m.message = fmt.Sprintf("Copied %d paths to OS clipboard", len(pathsToCopy))
+					}
+				}
+			}
+			return m, tick()
 
 		case "c": // Copy
 			m.clipboard = nil
@@ -978,7 +1063,11 @@ func (m Model) View() string {
 	headerBox := ui.HeaderBoxStyle.Width(m.width - 4).Render(headerView)
 
 	var middleHeader string
-	if m.isInput {
+	if m.isSearch {
+		middleHeader = ui.SelectedStyle.Render("Find: ") + m.input.View()
+	} else if m.filter != "" {
+		middleHeader = ui.SelectedStyle.Render("Filter: ") + ui.FileStyle.Render(m.filter) + ui.InfoStyle.Render(" (Press 'esc' to clear)")
+	} else if m.isInput {
 		middleHeader = ui.SelectedStyle.Render("Go to: ") + m.input.View()
 	} else if m.isConfirm {
 		middleHeader = ui.WarningStyle.Render(fmt.Sprintf("Delete %d items? (y/n)", len(m.toDelete)))
@@ -1177,6 +1266,7 @@ func (m Model) HelpView() string {
 		{"PgUp/PgDown", "Fast navigation / Page scroll"},
 		{"Home/End", "Jump to start/end"},
 		{"h, Left", "Go to parent directory"},
+		{"w", "Go to home directory"},
 		{"l, Right, Enter", "Open directory / Open externally"},
 		{"v", "View file internally (text)"},
 		{"m", "Hex view file"},
@@ -1184,6 +1274,8 @@ func (m Model) HelpView() string {
 		{"r", "Rename current item"},
 		{"Space", "Toggle selection"},
 		{"/", "Go to specific path (Rel/Abs)"},
+		{"f", "Find/Filter in directory"},
+		{"y", "Yank path to OS clipboard"},
 		{"c", "Copy selected/current item"},
 		{"x", "Cut selected/current item"},
 		{"p", "Paste items from clipboard"},
